@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Currency;
+use App\Models\Exchange;
+use App\Models\Ticker;
+use DB;
 
 class CurrencyController extends Controller
 {
@@ -13,7 +17,8 @@ class CurrencyController extends Controller
      */
     public function index()
     {
-        //
+        $currencies = Currency::orderby('_id')->paginate(50);
+        return $this->paginateJsonResponse($currencies);
     }
 
     /**
@@ -45,7 +50,8 @@ class CurrencyController extends Controller
      */
     public function show($id)
     {
-        //
+        $currency = Currency::find($id);
+        return $this->successJsonResponse(['data' => $currency]);
     }
 
     /**

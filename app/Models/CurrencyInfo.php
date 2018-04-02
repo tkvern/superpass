@@ -2,9 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Jenssegers\Mongodb\Eloquent\Model as Eloquent;
 
-class CurrencyInfo extends Model
+class CurrencyInfo extends Eloquent
 {
-    //
+    protected $collection = 'currency_info';
+
+    public function currencies()
+    {
+        return $this->hasMany(Currency::class, 'symbol', 'symbol');
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\CurrencyInfo;
 
 class CurrencyInfoController extends Controller
 {
@@ -13,7 +14,8 @@ class CurrencyInfoController extends Controller
      */
     public function index()
     {
-        //
+        $currencyInfos = CurrencyInfo::orderby('_id')->paginate(50);
+        return $this->paginateJsonResponse($currencyInfos);
     }
 
     /**

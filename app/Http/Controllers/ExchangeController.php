@@ -12,7 +12,7 @@ class ExchangeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request)
+    public function index()
     {
         $exchanges = Exchange::orderby('_id')->paginate(50);
         return $this->paginateJsonResponse($exchanges);
@@ -42,12 +42,13 @@ class ExchangeController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  string  $id
      * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
-        //
+        $exchange = Exchange::find($id);
+        return $this->successJsonResponse(['data' => $exchange]);
     }
 
     /**

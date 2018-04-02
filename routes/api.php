@@ -24,4 +24,7 @@ Route::group([], function () {
 
     // route list
     Route::resource('exchange', 'ExchangeController');
+    Route::resource('currency', 'CurrencyController');
+    Route::resource('currency_info', 'CurrencyInfoController');
+    Route::resource('ticker', 'TickerController');
 });
