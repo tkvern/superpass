@@ -19,12 +19,14 @@ class TickerController extends Controller
      */
     public function index()
     {
+        // Cache exchanges
         $exchanges = Exchange::whereIn('symbol', ['binance', 'huobi'])->get(['_id']);
-        $currencyinfos = CurrencyInfo::whereIn('symbol', ['BTC', 'ETH', 'LTC'])->orderby('_id')->paginate(50);
         $exchangeIdArray = [];
         foreach ($exchanges as $exchange) {
             $exchangeIdArray[] = new ObjectID($exchange['_id']);
         }
+
+        $currencyinfos = CurrencyInfo::whereIn('symbol', ['BTC', 'ETH', 'LTC'])->orderby('_id')->paginate(50);
         foreach ($currencyinfos as $currencyinfo) {
             $priceArrayNow = [];
             $priceArray1Hour = [];
@@ -41,6 +43,8 @@ class TickerController extends Controller
                             ->orderby('ts', 'desc')
                             ->first();
                 $ticker['price'] > 0 ? $priceArrayNow[] = $ticker['price'] : false;
+                // info("\n\n\nprice: " . $ticker['price'] . "\nexchange: " . $ticker['exchange_id'] . "\n\n ts:" . $ticker['ts']);
+
 
                 // get 1hour
                 $ticker1Hour = Ticker::where('ts', '>', (int)date(strtotime('-1 hour')))
