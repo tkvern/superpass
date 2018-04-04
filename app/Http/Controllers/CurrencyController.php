@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Currency;
 use App\Models\Exchange;
 use App\Models\Ticker;
+use App\Models\CurrencyInfo;
 use DB;
 
 class CurrencyController extends Controller
@@ -50,8 +52,26 @@ class CurrencyController extends Controller
      */
     public function show($id)
     {
+        $minutes = 1;
         $currency = Currency::find($id);
-        return $this->successJsonResponse(['data' => $currency]);
+        $exchanges = Cache::remember('exchanges', $minutes, function () {
+            return Exchange::whereIn('symbol', ['binance', 'huobi'])->get();
+        });
+        $currencyinfos = Cache::remember('currencyinfos', $minutes, function () {
+            return CurrencyInfo::whereIn('symbol', ['BTC', 'ETH', 'LTC'])->orderby('_id')->take(100)->get();
+        });
+        $tickers = [];
+        foreach ($currencyinfos as $currencyinfo) {
+            $currencies = Currency::where('symbol', $currencyinfo['symbol'])->whereIn('exchange_id', $this->objectIDFormat($exchanges))->get();
+            $tickers[] = Ticker::whereIn('exchange_id', $this->objectIDFormat($exchanges))
+            ->whereIn('currency_id', $this->objectIDFormat($currencies))
+            ->where('ts', '>', (int)date(strtotime('-1 minute')))
+            ->orderby('ts', 'desc')
+            ->take(count($this->objectIDFormat($currencies)))
+            ->get()
+            ->avg('price');
+        }
+        return $this->successJsonResponse(['data' => $tickers]);
     }
 
     /**
