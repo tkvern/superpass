@@ -22,86 +22,88 @@ class TickerController extends Controller
     {
         $minutes = 1440;
         // Cache exchanges
-        $exchanges = Cache::remember('exchanges', $minutes, function () {
-            $arr = [];
-            $items = Exchange::whereIn('symbol', ['binance', 'huobi'])->get(['_id']);
-            foreach ($items as $item) {
-                $arr[] = new ObjectID($item['_id']);
-            }
-            return $arr;
+        Cache::remember('exchanges', $minutes, function () {
+            return Exchange::whereIn('symbol', ['binance', 'huobi'])->get(['_id']);
         });
 
-        $currencyinfos = Cache::remember('currencyinfos', $minutes, function () {
+        // Cache currencyinfos
+        Cache::remember('currencyinfos', $minutes, function () {
             return CurrencyInfo::orderby('_id')->take(100)->get();
         });
         $priceArrayBTC = [];
+        $tickers = Cache::remember('tickers', now()->addSeconds(3), function () {
+            $exchanges = Cache::pull('exchanges');
+            $currencyinfos = Cache::pull('currencyinfos');
+            foreach ($currencyinfos as $currencyinfo) {
+                $priceArrayNow = [];
+                $priceArray1Hour = [];
+                $priceArray24Hour = [];
+                $priceArray7d = [];
+                $volumeArray24Hour = [];
+                $highArray24Hour = [];
+                $lowArray24Hour = [];
 
-        foreach ($currencyinfos as $currencyinfo) {
-            $priceArrayNow = [];
-            $priceArray1Hour = [];
-            $priceArray24Hour = [];
-            $priceArray7d = [];
-            $volumeArray24Hour = [];
-            $highArray24Hour = [];
-            $lowArray24Hour = [];
-
-            $currencies = Currency::where('symbol', $currencyinfo['symbol'])->whereIn('exchange_id', $exchanges)->get();
-            // get now
-            foreach ($currencies as $currency) {
-                $ticker = Ticker::where('ts', '>', (int)date(strtotime('-1 minute')))
+                $currencies = Currency::where('symbol', $currencyinfo['symbol'])
+                    ->whereIn('exchange_id', $this->objectIDFormat($exchanges))
+                    ->get();
+                // get now
+                foreach ($currencies as $currency) {
+                    $ticker = Ticker::where('ts', '>', (int)date(strtotime('-1 minute')))
                             ->where('currency_id', new ObjectID($currency['_id']))
                             ->orderby('ts', 'desc')
                             ->first();
-                $ticker['price'] > 0 ? $priceArrayNow[] = $ticker['price'] : false;
+                    $ticker['price'] > 0 ? $priceArrayNow[] = $ticker['price'] : false;
 
 
-                // get 1hour
-                $ticker1Hour = Ticker::where('ts', '>', (int)date(strtotime('-1 hour')))
+                    // get 1hour
+                    $ticker1Hour = Ticker::where('ts', '>', (int)date(strtotime('-1 hour')))
                             ->where('currency_id', new ObjectID($currency['_id']))
                             ->first();
-                $ticker1Hour['price'] > 0 ? $priceArray1Hour[] = $ticker1Hour['price'] : false;
+                    $ticker1Hour['price'] > 0 ? $priceArray1Hour[] = $ticker1Hour['price'] : false;
 
-                // get 24hour
-                $ticker24Hour = Ticker::where('ts', '>', (int)date(strtotime('-24 hour')))
+                    // get 24hour
+                    $ticker24Hour = Ticker::where('ts', '>', (int)date(strtotime('-24 hour')))
                             ->where('currency_id', new ObjectID($currency['_id']))
                             ->first();
-                $ticker24Hour['price'] > 0 ? $priceArray24Hour[] = $ticker24Hour['price'] : false;
+                    $ticker24Hour['price'] > 0 ? $priceArray24Hour[] = $ticker24Hour['price'] : false;
 
-                // get 7day
-                $ticker7Day = Ticker::where('ts', '>', (int)date(strtotime('-7 day')))
+                    // get 7day
+                    $ticker7Day = Ticker::where('ts', '>', (int)date(strtotime('-7 day')))
                             ->where('currency_id', new ObjectID($currency['_id']))
                             ->first();
-                $ticker7Day['price'] > 0 ? $priceArray7d[] = $ticker7Day['price'] : false;
+                    $ticker7Day['price'] > 0 ? $priceArray7d[] = $ticker7Day['price'] : false;
 
-                // Volume 24hour
-                $volume24Hour = Volume24Hour::where('ts', '>', (int)date(strtotime('-1 minute')))
+                    // Volume 24hour
+                    $volume24Hour = Volume24Hour::where('ts', '>', (int)date(strtotime('-1 minute')))
                             ->where('currency_id', new ObjectID($currency['_id']))
                             ->orderby('ts', 'desc')
                             ->first();
-                $volume24Hour['amount'] > 0 ? $volumeArray24Hour[] = $volume24Hour['amount'] : false;
-                $volume24Hour['high_price_24h'] > 0 ? $highArray24Hour[] = $volume24Hour['high_price_24h'] : false;
-                $volume24Hour['low_price_24h'] > 0 ? $lowArray24Hour[] = $volume24Hour['low_price_24h'] : false;
+                    $volume24Hour['amount'] > 0 ? $volumeArray24Hour[] = $volume24Hour['amount'] : false;
+                    $volume24Hour['high_price_24h'] > 0 ? $highArray24Hour[] = $volume24Hour['high_price_24h'] : false;
+                    $volume24Hour['low_price_24h'] > 0 ? $lowArray24Hour[] = $volume24Hour['low_price_24h'] : false;
 
-                if ($currency['symbol'] == 'BTC') {
-                    $priceArrayBTC[] = $ticker['price'];
+                    if ($currency['symbol'] == 'BTC') {
+                        $priceArrayBTC[] = $ticker['price'];
+                    }
                 }
+
+                $price = count($priceArrayNow) > 0 ? array_sum($priceArrayNow)/count($priceArrayNow) : 0;
+                $price1Hour = count($priceArray1Hour) > 0 ? array_sum($priceArray1Hour)/count($priceArray1Hour) : 0;
+                $price24Hour =  count($priceArray24Hour) > 0 ? array_sum($priceArray24Hour)/count($priceArray24Hour) : 0;
+                $priceArray7d = count($priceArray24Hour) > 0 ? array_sum($priceArray7d)/count($priceArray7d) : 0;
+
+                $currencyinfo['24h_volume_usd'] = count($highArray24Hour) > 0 ? array_sum($volumeArray24Hour) / 100000 : 0;
+                $currencyinfo['high_price_24h'] = count($highArray24Hour) > 0 ? array_sum($highArray24Hour)/count($highArray24Hour) : 0;
+                $currencyinfo['low_price_24h'] = count($highArray24Hour) > 0 ? array_sum($lowArray24Hour)/count($lowArray24Hour) : 0;
+                $currencyinfo['price_usd'] = $price > 0 ? $price : 0;
+                $currencyinfo['price_btc'] = $price / (count($priceArrayBTC) > 0 ? array_sum($priceArrayBTC)/count($priceArrayBTC) : 1);
+                $currencyinfo['percent_change_1h'] = $price1Hour > 0 & $price > 0 ? 100 * ($price - $price1Hour)/ $price : 0;
+                $currencyinfo['percent_change_24h'] = $price24Hour > 0 & $price > 0 ? 100 * ($price - $price24Hour)/ $price : 0;
+                $currencyinfo['percent_change_7d'] = $priceArray7d > 0 & $price > 0 ? 100 * ($price - $priceArray7d)/ $price : 0;
             }
-
-            $price = count($priceArrayNow) > 0 ? array_sum($priceArrayNow)/count($priceArrayNow) : 0;
-            $price1Hour = count($priceArray1Hour) > 0 ? array_sum($priceArray1Hour)/count($priceArray1Hour) : 0;
-            $price24Hour =  count($priceArray24Hour) > 0 ? array_sum($priceArray24Hour)/count($priceArray24Hour) : 0;
-            $priceArray7d = count($priceArray24Hour) > 0 ? array_sum($priceArray7d)/count($priceArray7d) : 0;
-
-            $currencyinfo['24h_volume_usd'] = count($highArray24Hour) > 0 ? array_sum($volumeArray24Hour) / 100000 : 0;
-            $currencyinfo['high_price_24h'] = count($highArray24Hour) > 0 ? array_sum($highArray24Hour)/count($highArray24Hour) : 0;
-            $currencyinfo['low_price_24h'] = count($highArray24Hour) > 0 ? array_sum($lowArray24Hour)/count($lowArray24Hour) : 0;
-            $currencyinfo['price_usd'] = $price > 0 ? $price : 0;
-            $currencyinfo['price_btc'] = $price / (count($priceArrayBTC) > 0 ? array_sum($priceArrayBTC)/count($priceArrayBTC) : 0);
-            $currencyinfo['percent_change_1h'] = $price1Hour > 0 & $price > 0 ? 100 * ($price - $price1Hour)/ $price : 0;
-            $currencyinfo['percent_change_24h'] = $price24Hour > 0 & $price > 0 ? 100 * ($price - $price24Hour)/ $price : 0;
-            $currencyinfo['percent_change_7d'] = $priceArray7d > 0 & $price > 0 ? 100 * ($price - $priceArray7d)/ $price : 0;
-        }
-        return $this->successJsonResponse(['list' => $currencyinfos]);
+            return $currencyinfos;
+        });
+        return $this->successJsonResponse(['list' => $tickers]);
     }
 
     /**
