@@ -27,4 +27,5 @@ Route::group([], function () {
     Route::resource('currency', 'CurrencyController');
     Route::resource('currency_info', 'CurrencyInfoController');
     Route::resource('ticker', 'TickerController');
+    Route::get('/ticker_cache', 'TickerController@cache');
 });
