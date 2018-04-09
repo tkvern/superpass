@@ -96,10 +96,10 @@ class TickerController extends Controller
                 }
             }
 
-            $price = count($priceArrayNow) > 0 ? array_sum($priceArrayNow)/count($priceArrayNow) : 0;
+            $price = count($priceArrayNow) > 0 & array_sum($priceArrayNow) > 0 ? array_sum($priceArrayNow)/count($priceArrayNow) : 0;
             $price1Hour = count($priceArray1Hour) > 0 ? array_sum($priceArray1Hour)/count($priceArray1Hour) : 0;
-            $price24Hour =  count($priceArray24Hour) > 0 ? array_sum($priceArray24Hour)/count($priceArray24Hour) : 0;
-            $priceArray7d = count($priceArray24Hour) > 0 ? array_sum($priceArray7d)/count($priceArray7d) : 0;
+            $price24Hour =  count($priceArray24Hour) > 0 & array_sum($priceArray24Hour) > 0 ? array_sum($priceArray24Hour)/count($priceArray24Hour) : 0;
+            $priceArray7d = count($priceArray24Hour) > 0 & array_sum($priceArray7d) > 0 ? array_sum($priceArray7d)/count($priceArray7d) : 0;
 
             $currencyinfo['24h_volume_usd'] = count($highArray24Hour) > 0 ? array_sum($volumeArray24Hour) / 100000 : 0;
             $currencyinfo['high_price_24h'] = count($highArray24Hour) > 0 ? array_sum($highArray24Hour)/count($highArray24Hour) : 0;
