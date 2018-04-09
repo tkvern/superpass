@@ -53,7 +53,7 @@ class TickerController extends Controller
             $lowArray24Hour = [];
 
             $currencies = Currency::where('symbol', $currencyinfo['symbol'])
-                ->whereIn('exchange_id', $this->objectIDFormat($exchanges))
+                ->whereIn('exchange_id', $this->objectIDFormat((object)$exchanges))
                 ->get();
             foreach ($currencies as $currency) {
                 // get now
