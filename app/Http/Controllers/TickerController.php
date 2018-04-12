@@ -83,8 +83,7 @@ class TickerController extends Controller
                 $ticker7Day['price'] > 0 ? $priceArray7d[] = $ticker7Day['price'] : false;
 
                 // Volume 24hour
-                $volume24Hour = Volume24Hour::whereBetween('ts', [(int)date(strtotime('-30 second')), (int)date(strtotime('-1 second'))])
-                        ->where('currency_id', new ObjectID($currency['_id']))
+                $volume24Hour = Volume24Hour::where('currency_id', new ObjectID($currency['_id']))
                         ->orderby('ts', 'desc')
                         ->first();
                 $volume24Hour['amount'] > 0 ? $volumeArray24Hour[] = $volume24Hour['amount'] : false;
